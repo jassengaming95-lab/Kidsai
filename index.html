@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kids AI - Homework Pro</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background:#000; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden; }
+.app-container { background:#0a0a0a; width:100vw; height:100vh; max-width:1800px; max-height:96vh; display:flex; flex-direction:column; border:1px solid #222; border-radius:15px; }
+@media (max-width:768px){
+  .app-container{ max-height:100vh; border-radius:0; border:none; }
+  .header{ padding:15px !important; } .input-box{ padding:15px !important; }
+  .msg{ max-width:90% !important; font-size:16px !important; }
+}
+.auth-screen{ display:flex; justify-content:center; align-items:center; height:100%; }
+.auth-card{ background:#111; padding:30px; border-radius:20px; width:90%; max-width:400px; text-align:center; border:1px solid #333; }
+input[type=text],input[type=password]{ width:100%; padding:15px; margin:10px 0; background:#1a1a1a; border:1px solid #333; color:#fff; border-radius:12px; font-size:16px; outline:none; }
+.main-btn{ width:100%; padding:15px; background:#007bff; color:#fff; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-size:18px; }
+.header{ padding:20px 40px; background:#111; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; }
+.header-btns{ display:flex; gap:8px; }
+.header-btns button{ background:#222; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:14px; }
+.header-btns button:hover{ background:#2c2c2c; }
+.user-tag{ color:#007bff; font-weight:bold; font-size:1.1rem; }
+.chat-area{ flex:1; overflow-y:auto; padding:20px; background:#050505; display:flex; flex-direction:column; gap:20px; }
+.msg{ max-width:80%; padding:15px 20px; border-radius:18px; font-size:18px; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; }
+.user-msg{ align-self:flex-end; background:#005cc5; border-bottom-right-radius:2px; }
+.ai-msg{ align-self:flex-start; background:#1a1a1a; border:1px solid #333; border-bottom-left-radius:2px; }
+.msg img{ max-width:100%; max-height:240px; border-radius:10px; display:block; margin-bottom:8px; }
+.input-box{ padding:25px 40px; background:#0a0a0a; display:flex; gap:15px; align-items:center; border-top:1px solid #222; }
+#userInput{ flex:1; background:#111; border:1px solid #333; padding:15px; color:#fff; border-radius:12px; font-size:16px; outline:none; }
+.send-btn{ background:#007bff; color:#fff; border:none; width:50px; height:50px; border-radius:12px; cursor:pointer; font-size:20px; }
+.send-btn:disabled{ opacity:.5; cursor:wait; }
+.dropdown{ position:absolute; right:0; top:40px; background:#181818; border:1px solid #333; border-radius:10px; width:200px; display:none; z-index:1000; }
+.dropdown button{ width:100%; padding:12px; background:none; border:none; color:#fff; text-align:left; cursor:pointer; border-bottom:1px solid #222; }
+.app-container{ position:relative; }
+#chatsPanel{ position:absolute; inset:0; background:#0a0a0a; z-index:2000; display:flex; flex-direction:column; border-radius:inherit; }
+#chatsPanel .ph{ padding:20px 40px; background:#111; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; gap:10px; }
+#chatsPanel .ph button{ background:#007bff; color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-size:15px; font-weight:bold; }
+#chatsPanel .ph .close{ background:#222; }
+#chatList{ flex:1; overflow-y:auto; padding:20px 40px; display:flex; flex-direction:column; gap:10px; }
+.chat-item{ background:#111; border:1px solid #333; border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; gap:10px; }
+.chat-item:hover{ border-color:#007bff; }
+.chat-item.active{ border-color:#007bff; }
+.chat-item small{ color:#777; display:block; margin-top:3px; }
+.chat-item .del{ background:none; border:none; color:#c33; font-size:18px; cursor:pointer; }
+.empty{ color:#777; text-align:center; margin-top:40px; }
+@media (max-width:768px){ #chatsPanel .ph,#chatList{ padding:15px; } }
+.hidden{ display:none !important; }
+#preview{ padding:0 40px 10px; background:#0a0a0a; }
+#preview img{ max-height:70px; border-radius:8px; vertical-align:middle; }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <div id="authPage" class="auth-screen">
+    <div class="auth-card">
+      <h1 id="authTitle" style="margin-bottom:20px;font-size:24px;">Account erstellen</h1>
+      <input type="text" id="regName" placeholder="Dein Name">
+      <input type="password" id="regPw" placeholder="Passwort">
+      <button onclick="handleAuth()" class="main-btn" id="actionBtn">Starten</button>
+      <button onclick="swapMode()" id="swapBtn" style="background:none;border:none;color:#777;margin-top:15px;cursor:pointer;text-decoration:underline;">Einloggen</button>
+    </div>
+  </div>
+
+  <div id="chatPage" class="hidden" style="flex-direction:column;height:100%;">
+    <div class="header">
+      <div class="header-btns">
+        <button onclick="startNew()">+ Neu</button>
+        <button onclick="openChats()">💬 Verlauf</button>
+      </div>
+      <div id="nameDisplay" class="user-tag"></div>
+      <div style="position:relative;">
+        <button onclick="toggleSettings()" style="background:none;border:none;font-size:24px;cursor:pointer;">⚙️</button>
+        <div id="drop" class="dropdown">
+          <button onclick="changePw()">Passwort ändern</button>
+          <button onclick="setKey()">API-Key eintragen</button>
+          <button onclick="location.reload()" style="color:red;">Abmelden</button>
+        </div>
+      </div>
+    </div>
+    <div class="chat-area" id="chatContainer"></div>
+    <div id="preview" class="hidden"></div>
+    <div class="input-box">
+      <input type="text" id="userInput" placeholder="Hausaufgabe schreiben..." onkeypress="if(event.key==='Enter')ask()">
+      <button onclick="ask()" class="send-btn" id="sendBtn">🚀</button>
+    </div>
+  </div>
+
+  <div id="chatsPanel" class="hidden">
+    <div class="ph">
+      <button class="close" onclick="closeChats()">← Zurück</button>
+      <strong>Dein Chatverlauf</strong>
+      <button onclick="startNew();closeChats()">+ Neuer Chat</button>
+    </div>
+    <div id="chatList"></div>
+  </div>
+</div>
+
+<script>
+/* ===== KI-Einstellungen =====
+   Für den echten Einsatz mit Kindern: Anfragen über EIGENEN Server leiten (AI_URL),
+   der den API-Key geheim hält. Der Key-Eintrag im Menü ist nur zum Testen. */
+const AI_URL   = "https://api.deepseek.com/chat/completions";
+const AI_MODEL = "deepseek-v4-flash";
+const DEFAULT_KEY = ""; // Kein Key im Code! Eintragen über ⚙️ → API-Key eintragen
+const SYSTEM_PROMPT = "Benutze in deinen Antworten niemals das Sternchen-Zeichen (*). Schreibe kein Markdown mit Sternchen (kein Fettdruck mit ** und keine Aufzählung mit *). Schreibe Malnehmen in Mathe mit · oder × (zum Beispiel 3 · 4 oder 3 × 4). Für Aufzählungen nimm Zahlen (1., 2.) oder den Strich -.";
+
+let db = JSON.parse(localStorage.getItem('kids_ai_v11')) || {};
+let activeUser = "", isLogin = false, history = [], pendingImg = null, busy = false;
+let chats = [], current = null;
+
+async function hash(s){
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode("kids-ai:" + s));
+        return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+  catch { return btoa(unescape(encodeURIComponent(s))); }
+}
+function save(){ localStorage.setItem('kids_ai_v11', JSON.stringify(db)); }
+
+function swapMode(){
+  isLogin = !isLogin;
+  document.getElementById('authTitle').innerText = isLogin ? "Anmelden" : "Account erstellen";
+  document.getElementById('actionBtn').innerText = isLogin ? "Einloggen" : "Starten";
+  document.getElementById('swapBtn').innerText = isLogin ? "Neuen Account erstellen" : "Einloggen";
+}
+async function handleAuth(){
+  const n = document.getElementById('regName').value.trim();
+  const p = document.getElementById('regPw').value;
+  if(!n || !p) return;
+  const h = await hash(p);
+  if(isLogin){ if(db[n] === h) openApp(n); else alert("Falsches Passwort oder Name!"); }
+  else { if(db[n]){ alert("Dieser Name existiert schon!"); return; } db[n] = h; save(); openApp(n); }
+}
+function openApp(name){
+  activeUser = name;
+  document.getElementById('authPage').classList.add('hidden');
+  const c = document.getElementById('chatPage'); c.classList.remove('hidden'); c.style.display = 'flex';
+  document.getElementById('nameDisplay').innerText = "(" + name + ")";
+  try { chats = JSON.parse(localStorage.getItem("kids_ai_chats_" + name)) || []; } catch { chats = []; }
+  startNew();
+}
+
+function addMsg(txt, type, img){
+  const c = document.getElementById('chatContainer');
+  const d = document.createElement('div'); d.className = "msg " + type;
+  if(img){ const i = document.createElement('img'); i.src = img; d.appendChild(i); }
+  const t = document.createElement('span'); t.textContent = txt; d.appendChild(t);  // textContent = sicher
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+  return t;
+}
+
+function getKey(){ return localStorage.getItem('kids_ai_key') || DEFAULT_KEY; }
+function setKey(){
+  const k = prompt("DeepSeek API-Key (wird nur in diesem Browser gespeichert):");
+  if(k !== null){ localStorage.setItem('kids_ai_key', k.trim()); alert("Gespeichert."); }
+}
+
+async function ask(){
+  if(busy) return;
+  const input = document.getElementById('userInput');
+  const q = input.value.trim();
+  if(!q) return;
+  input.value = "";
+
+  addMsg(q, "user-msg");
+  history.push({ role:"user", content: q });
+
+  // Merken, in welchem Chat die Frage gestellt wurde (falls man währenddessen auf "+ Neu" tippt)
+  const chatAtAsk = current;
+
+  busy = true; document.getElementById('sendBtn').disabled = true;
+  const out = addMsg("Ich denke nach …", "ai-msg");
+  try{
+    const msgs = [];
+    if(SYSTEM_PROMPT) msgs.push({ role:"system", content: SYSTEM_PROMPT });
+    msgs.push(...trimHistory());
+    const res = await fetch(AI_URL, { method:"POST",
+      headers: { "Content-Type":"application/json", "Authorization":"Bearer " + getKey() },
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 1000, messages: msgs }) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error?.message || res.status);
+    const text = noStars(data.choices[0].message.content || "");
+    out.textContent = text;
+    if(current === chatAtAsk) history.push({ role:"assistant", content: text });
+    record("user", q, false, chatAtAsk); record("assistant", text, false, chatAtAsk);
+  }catch(e){
+    if(current === chatAtAsk) history.pop();
+    out.textContent = "Das hat leider nicht geklappt. Prüfe die Internetverbindung und den API-Key (⚙️ → API-Key eintragen). " + e.message;
+  }
+  busy = false; document.getElementById('sendBtn').disabled = false;
+  const c = document.getElementById('chatContainer'); c.scrollTop = c.scrollHeight;
+}
+
+/* Entfernt Sternchen aus Antworten: **fett** -> fett, "* Punkt" -> "• Punkt", 3*4 -> 3 · 4 */
+function noStars(t){
+  return t
+    .replace(/\*\*(.+?)\*\*/gs, "$1")
+    .replace(/^\s*\*\s+/gm, "• ")
+    .replace(/([0-9a-zA-Z)\]])\s*\*\s*(?=[0-9a-zA-Z(\[])/g, "$1 · ")
+    .replace(/\*/g, "");
+}
+
+function toggleSettings(){ const d = document.getElementById('drop'); d.style.display = d.style.display === 'block' ? 'none' : 'block'; }
+async function changePw(){
+  const p = prompt("Neues Passwort:");
+  if(p){ db[activeUser] = await hash(p); save(); alert("Passwort wurde geändert!"); }
+}
+function trimHistory(){ const h = history.slice(-20); while(h.length && h[0].role !== "user") h.shift(); return h; }
+function persist(){ try { localStorage.setItem("kids_ai_chats_" + activeUser, JSON.stringify(chats)); } catch {} }
+
+/* "+ Neu": startet sofort einen leeren Chat. Der bisherige Chat bleibt im Verlauf gespeichert. */
+function startNew(){
+  current = { id: Date.now(), title: "", ts: Date.now(), msgs: [] };
+  history = []; pendingImg = null; document.getElementById('preview').classList.add('hidden');
+  document.getElementById('chatContainer').innerHTML = "";
+  document.getElementById('drop').style.display = 'none';
+  addMsg("Hallo " + activeUser + "! Ich bin deine KI. Frag mich nach Hausaufgaben.", "ai-msg");
+  document.getElementById('userInput').focus();
+}
+function record(role, text, img, chat){
+  const c = chat || current;
+  if(!c.title && role === "user") c.title = text.slice(0, 40);
+  c.msgs.push({ role, text, img });
+  c.ts = Date.now();
+  if(!chats.includes(c)) chats.unshift(c);
+  persist();
+}
+
+/* "💬 Verlauf": zeigt alle gespeicherten Chats */
+function openChats(){
+  const l = document.getElementById('chatList'); l.innerHTML = "";
+  if(!chats.length){ const e = document.createElement('div'); e.className = "empty"; e.textContent = "Noch keine Chats. Schreib etwas, dann erscheint der Chat hier."; l.appendChild(e); }
+  [...chats].sort((a,b) => b.ts - a.ts).forEach(c => {
+    const it = document.createElement('div'); it.className = "chat-item" + (c === current ? " active" : "");
+    const t = document.createElement('div');
+    t.textContent = c.title || "Chat";
+    const sm = document.createElement('small'); sm.textContent = new Date(c.ts).toLocaleString('de-DE'); t.appendChild(sm);
+    const d = document.createElement('button'); d.className = "del"; d.textContent = "🗑️";
+    d.onclick = ev => { ev.stopPropagation(); if(confirm("Diesen Chat löschen?")){ chats = chats.filter(x => x !== c); if(current === c) startNew(); persist(); openChats(); } };
+    it.onclick = () => loadChat(c);
+    it.append(t, d); l.appendChild(it);
+  });
+  document.getElementById('chatsPanel').classList.remove('hidden');
+}
+function closeChats(){ document.getElementById('chatsPanel').classList.add('hidden'); }
+function loadChat(c){
+  current = c; pendingImg = null; document.getElementById('preview').classList.add('hidden');
+  history = c.msgs.map(m => ({ role: m.role, content: m.text }));
+  const box = document.getElementById('chatContainer'); box.innerHTML = "";
+  c.msgs.forEach(m => addMsg((m.img ? "🖼️ " : "") + m.text, m.role === "user" ? "user-msg" : "ai-msg"));
+  closeChats();
+}
+</script>
+</body>
+</html>
